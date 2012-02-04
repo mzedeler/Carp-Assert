@@ -29,9 +29,12 @@ sub noop { undef }
 sub noop_affirm (&;$) { undef };
 
 sub import {
+    my @params = grep {!/^:NDUMP$/} @_;
+    *_fail = (@_ != @params) ? *Carp::croak : *Carp::confess;
+
     my $env_ndebug = exists $ENV{PERL_NDEBUG} ? $ENV{PERL_NDEBUG}
                                               : $ENV{'NDEBUG'};
-    if( grep(/^:NDEBUG$/, @_) or $env_ndebug ) {
+    if( grep(/^:NDEBUG$/, @params) or $env_ndebug ) {
         my $caller = caller;
         foreach my $func (grep !/^DEBUG$/, @{$EXPORT_TAGS{'NDEBUG'}}) {
             if( $func eq 'affirm' ) {
@@ -44,8 +47,9 @@ sub import {
     }
     else {
         *DEBUG = *REAL_DEBUG;
-        Carp::Assert->_export_to_level(1, @_);
+        Carp::Assert->_export_to_level(1, @params);
     }
+    
 }
 
 
@@ -278,7 +282,7 @@ like( $@, '/^Assertion \(Dogs are people, too!\) failed!/', 'names' );
 sub assert ($;$) {
     unless($_[0]) {
         require Carp;
-        Carp::confess( _fail_msg($_[1]) );
+        _fail( _fail_msg($_[1]) );
     }
     return undef;
 }
@@ -337,7 +341,7 @@ sub affirm (&;$) {
         }
 
         require Carp;
-        Carp::confess( _fail_msg($name) );
+        _fail( _fail_msg($name) );
     }
     return undef;
 }
